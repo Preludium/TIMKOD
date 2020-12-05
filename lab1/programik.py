@@ -5,15 +5,20 @@ alphabet = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n'
 characters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
            'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ' ']
 
+content = ''
+SIZE = 10000
+
 def readFile(name):
     file = open(name, 'r')
     return file.read()
 
 
-def fileParameters(filename):
-    content = readFile(filename)
+def getAverageLen(source = ''):
     totalLength = 0
-    words = content.split(' ')
+
+    words = source.split()
+    if (source == ''):
+        words = content.split()
 
     for word in words:
         totalLength += len(word)
@@ -32,126 +37,167 @@ def generateSingleWord(lettersSource, probability):
     return word
 
 
-def exercise1(size):
+def exercise1(printWords = False):
     total_length = 0
-    probability = [1 / len(alphabet)] * len(alphabet)
-    for _ in range(size):
-        total_length += len(generateSingleWord(alphabet, probability))
+    probabilities = [1 / len(alphabet)] * len(alphabet)
+    for _ in range(SIZE):
+        word = generateSingleWord(alphabet, probabilities)
+        if (printWords): print(word)
+        total_length += len(generateSingleWord(alphabet, probabilities))
 
-    return total_length / size
+    return total_length / SIZE
 
 
-def exercise2(filename):
-    content = readFile(filename)
-    letters = {}
+def exercise2():
+    lettersDictionary = {}
     counter = 0
 
     for letter in content:
-        cardinality = letters.get(letter, 0)
-        letters.update({letter: cardinality + 1})
+        if letter not in lettersDictionary:
+            lettersDictionary[letter] = 1
+        else:
+            lettersDictionary[letter] += 1
         counter += 1
 
-    for letter in letters:
-        letters.update({letter: letters.get(letter) / counter})
+    lettersDictionary = {k: v / counter for k, v in lettersDictionary.items()}
 
-    return {k: v for k, v in sorted(letters.items(), key=lambda item: item[1], reverse=True)}
+    return {k: v for k, v in sorted(lettersDictionary.items(), key=lambda item: item[1], reverse=True)}
 
 
-def exercise3(size, frequency):
+def exercise3(frequency, printWords = False):
     keys = list(frequency.keys())
-    print(keys)
     probability_list = list(frequency.values())
-    print(probability_list)
     total_length = 0
 
-    for _ in range(size):
-        total_length += len(generateSingleWord(keys, probability_list))
+    for _ in range(SIZE):
+        word = generateSingleWord(keys, probability_list)
+        total_length += len(word)
+        if (printWords): print(word)
 
-    return total_length / size
+    return total_length / SIZE
 
 
-def excercise4(filename, letter):
-    content = readFile(filename)
-    
+def excercise4(letter):
     frequencies = {}
     for char in characters:
         frequencies[char] = 0
 
     counter = 0
-    saveNextChar = False
-    for char in content:
-        if (saveNextChar):
+    prevChar = content[0];
+    for char in content[1:]:
+        if (prevChar == letter):
             counter += 1
             frequencies[char] += 1
-            saveNextChar = False
-            continue
-        elif (char == letter):
-            saveNextChar = True
+        
+        prevChar = char
+        
+    if counter == 0:
+        return frequencies
+
+    return {k: v/counter for k, v in frequencies.items()}
+
+
+def generateOccurencesDictionary(level):
+    dictionary = {}
+
+    for index, char in enumerate(content[level:]):
+        key = content[index : level + index]
+
+        if not key in dictionary:
+                dictionary[key] = {}
+
+        if char in dictionary[key]:
+            dictionary[key][char] += 1
+        else:
+            dictionary[key][char] = 1
+
+    return dictionary
+
+
+def getProbabilities(dictionary):
+    for key in dictionary:
+        occurences = sum(dictionary[key].values())
+
+        for childKey in dictionary[key]:
+            if occurences != 0:
+                dictionary[key][childKey] /= occurences
+
+    return dictionary
+
+
+def excercise5(textLen, level):
+    occurencesDictionary = generateOccurencesDictionary(level)
+    probabilitiesDictionary = getProbabilities(occurencesDictionary)
     
-    return frequencies, counter
+    text = content[:level]
+    if level == 5:
+        text = 'probability'
 
-
-def getProbability(sampleText, word):
-    pass
-
-
-def excercise5(sampleText, markovLen, filename):
-    firstWord = 'probability';
-    word = firstWord[len(firstWord) - markovLen:]
-    textLen = 1000
-    newWord = firstWord
-
-    while(len(newWord) < textLen):
-        probability = getProbability(sampleText, word)
-        if sum(probability) == 0:
-            newWord += " "
-        # else:
-            # newWord += generateWithProbability(readFile(filename), 1, probability)
-        word = newWord[len(newWord) - markovLen:]
-    return newWord
-
+    for i in range(len(text), textLen):
+        key = text[i - level : i]
+        while key not in probabilitiesDictionary:
+            index = np.randint(0, len(content))
+            key = content[index : index + level]
+        source = list(probabilitiesDictionary[key].keys())
+        probabilities = list(probabilitiesDictionary[key].values())
+        text += np.random.choice(source, p=probabilities)[0]
+    
+    return text
 
 
 def main():
+    global content
     files = ['norm_hamlet.txt', 'norm_romeo.txt', 'norm_wiki_sample.txt', 'bees.txt']
-    # for filename in files:
-    print('File =', files[2], '\tAverage length =', fileParameters(files[2]), 'characters')
+    content = readFile(files[2])
+    print('\nFile = {}\tAverage length = {} characters'.format(files[2], getAverageLen()))
+
 
     # Excercise 1
-    size = 2000
-    print('\nExercise 1:\nWords =', size, '\tAverage length =', exercise1(size), 'characters')
+    print('\nExercise 1:')
+    print('\nWords = {}\tAverage length = {} characters'.format(SIZE, exercise1()))
 
     
     # Excercise 2
-    frequency = {}
-    print('\nExercise 2:')
-    # for filename in files:
-    frequency = exercise2(files[2])
-    print('\nFile =', files[2], '\nLetters:\n', frequency)
+    frequencies = {}
+    print('\nExercise 2:\n')
+    frequencies = exercise2()
+    for key, value in frequencies.items():
+        print('\'{}\' = {}'.format(key, value))
 
 
     # Excercise 3
     print('\nExercise 3:')
-    print('\nWords = ', size, '\tAverage length =', exercise3(size, frequency), 'characters')
+    print('\nWords = {}\tAverage length = {} characters'.format(SIZE, exercise3(frequencies)))
 
 
     # Excercise 4
     print('\nExercise 4:\n')
-    char = list(frequency.keys())[0]
-    dic, counter = excercise4(files[2], char)
+    char = list(frequencies.keys())[0]
+    dict = excercise4(char)
+
     print(char)
-    for key, value in dic.items():
-        print('\'{}\' after \'{}\' = {}'.format(key, char, value/counter))
+    for key in characters:
+        print('\'{}\' after \'{}\' = {}'.format(key, char, dict[key]))
     
-    char = list(frequency.keys())[1]
-    dic, counter = excercise4(files[2], char)
+    char = list(frequencies.keys())[1]
+    dict = excercise4(char)
     print('\n' + char)
-    for key, value in dic.items():
-        print('\'{}\' after \'{}\' = {}'.format(key, char, value/counter))
+    for key in characters:
+        print('\'{}\' after \'{}\' = {}'.format(key, char, dict[key]))
 
     
     # Excercise 5
     print('\nExercise 5:')
+    texts = []
+    for index, level in enumerate(range(1, 6, 2)):
+        texts.append(excercise5(SIZE, level))
+        print('\nLevel {}:\n'.format(level))
+        print(texts[index] + '\n')
+
+    for text, level in zip(texts, range(1, 6, 2)):
+        print('AVG word len of {} level = {}'.format(level, getAverageLen(text)))
+
+
 
 if __name__ == '__main__':
     main()
